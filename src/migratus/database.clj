@@ -173,6 +173,15 @@
          (map :id)
          (doall))))
 
+(defn completed* [db table-name]
+  (let [t-con (connection-or-spec db)]
+    (->> (sql/query t-con
+                    [(str "select id, applied, description from " table-name " where id != " reserved-id)]
+                    {:builder-fn rs/as-unqualified-lower-maps})
+         (sort-by :applied #(compare %2 %1))
+         (map #(select-keys % [:id :description :applied]))
+         (doall))))
+
 (defn table-exists?
   "Checks whether the migrations table exists, by attempting to select from
   it. Note that this appears to be the only truly portable way to determine
@@ -292,8 +301,11 @@
           (disconnect* conn)))))
   (completed-ids [this]
     (completed-ids* @connection (migration-table-name config)))
+  (completed [this]
+             (completed* @connection (migration-table-name config)))
   (migrate-up [this migration]
-              (log/info "Connection is " @connection
+              (log/info "Connection URL:" (.getURL (.getMetaData (:connection @connection)))
+                        "Connection is " @connection
                         "Config is" (update config :db utils/censor-password))
               (if (proto/tx? migration :up)
                 (jdbc/with-transaction [t-con (connection-or-spec @connection)]
@@ -318,3 +330,30 @@
 (defmethod proto/make-store :database
   [config]
   (->Database (atom nil) config))
+
+(comment
+
+  (let [config {:store :database
+                :migration-dir "resources/migrations"
+                :db {:dbtype "postgresql"
+                     :dbname "test_db"
+                     :user "root"
+                     :password "root"}}
+        s (proto/make-store config)]
+    (completed* (:db config) "schema_migrations"))
+
+  (let [config {:dbtype "postgresql"
+                :dbname "test_db"
+                :user "root"
+                :password "root"}
+        c {:store :database
+           :migration-dir "resources/migrations"
+           :db {:dbtype "postgresql"
+                :dbname "test_db"
+                :user "root"
+                :password "root"}}
+        ds (jdbc/get-datasource config)]
+    (completed-ids* ds "schema_migrations"))
+  
+  0
+  )

@@ -15,7 +15,7 @@
             SimpleFormatter]))
 
 (def global-cli-options
-  [[nil "--config NAME" "Configuration file name" ]
+  [[nil "--config NAME" "Configuration file name" :default "migratus.edn"]
    ["-v" nil "Verbosity level; may be specified multiple times to increase value"
     :id :verbosity
     :default 0
@@ -99,7 +99,8 @@
     (cond
       
       errors (error-msg errors)
-      (:applyed options) (log/info "listing applyed migrations")
+      (:applyed options) (do (log/info "listing applyed migrations")
+                             (migratus/completed-list cfg))
       (:pending options) (do (log/info "listing pending migrations, configuration is: \n" cfg)
                              (migratus/pending-list cfg))
       (:available options) (log/info "listing available migrations")

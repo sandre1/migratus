@@ -17,6 +17,7 @@
 (defprotocol Migration
   (id [this] "Id of this migration.")
   (name [this] "Name of this migration")
+  (applied [this] "Applied date of this migration")
   (tx? [this direction] "Whether this migration should run in a transaction.")
   (up [this config] "Bring this migration up.")
   (down [this config] "Bring this migration down."))
@@ -28,6 +29,8 @@
   (completed-ids [this]
     "Seq of ids of completed migrations in descending order of applied
     date.")
+  (completed [this]
+    "Seq of completed migrations in descending order of applied date.")
   (migrate-up [this migration]
     "Run and record an up migration")
   (migrate-down [this migration]

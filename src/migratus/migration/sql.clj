@@ -103,12 +103,14 @@
         (run-sql* config t-con expect-results? commands direction)) 
       (run-sql* config (or conn db) expect-results? commands direction))))
 
-(defrecord SqlMigration [id name up down]
+(defrecord SqlMigration [id name up down applied]
   proto/Migration
   (id [this]
     id)
   (name [this]
     name)
+  (applied [this]
+           applied)
   (tx? [this direction]
     (if-let [sql (get this direction)]
       (use-tx? sql)
@@ -124,7 +126,7 @@
 
 (defmethod proto/make-migration* :sql
   [_ mig-id mig-name payload config]
-  (->SqlMigration mig-id mig-name (:up payload) (:down payload)))
+  (->SqlMigration mig-id mig-name (:up payload) (:down payload) (:applied payload)))
 
 
 (defmethod proto/get-extension* :sql

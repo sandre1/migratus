@@ -68,6 +68,7 @@
 
 (defn migration-map
   [[id name exts] content properties]
+  
   (assoc-in {}
             (concat [id name] (map keyword (reverse exts)))
             (if properties
@@ -177,3 +178,46 @@
         migrations     (file-seq migration-dir)]
     (doseq [f (filter #(re-find pattern (.getName ^File %)) migrations)]
       (.delete ^File f))))
+
+
+(comment
+
+  (let [config {:store :database
+                :migration-dir "resources/migrations"
+                :db {:dbtype "postgresql"
+                     :dbname "test_db"
+                     :user "root"
+                     :password "root"}}]
+    (list-migrations config))
+
+  (let [config {:store :database
+                :migration-dir "resources/migrations"
+                :db {:dbtype "postgresql"
+                     :dbname "test_db"
+                     :user "root"
+                     :password "root"}}]
+    #_(find-migrations (utils/get-migration-dir config)
+                       (utils/get-exclude-scripts config)
+                       (props/load-properties config))
+    #_(list-migrations config)
+    (proto/make-migration* :sql 1234 "nas-test" {:up "" :down "" :applied "ieri"} config))
+
+
+
+  (jdbc/execute! (:db {:store :database
+                       :migration-dir "resources/migrations"
+                       :db {:dbtype "postgresql"
+                            :dbname "test_db"
+                            :user "root"
+                            :password "root"}}) ["select * from foo_bar"])
+
+  (let [config {:dbtype "postgresql"
+                :dbname "test_db"
+                :user "root"
+                :password "root"}
+        s (proto/make-store config)]
+    (completed-migrations config s))
+
+  (proto/make-migration* :sql 1234 "nas-test" {:up "" :down ""} config)
+  0
+  )

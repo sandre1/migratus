@@ -18,7 +18,8 @@
     [clojure.tools.logging :as log]
     [migratus.migrations :as mig]
     [migratus.protocols :as proto]
-    migratus.database))
+    migratus.database
+    [migratus.database :as db]))
 
 (defmacro ^{:private true} assert-args
   [& pairs]
@@ -66,6 +67,10 @@
 
 (defn completed-migrations [config store]
   (let [completed? (set (proto/completed-ids store))]
+    (filter (comp completed? proto/id) (mig/list-migrations config))))
+
+#_(defn completed-migrations [config store]
+  (let [completed? (set (proto/completed store))]
     (filter (comp completed? proto/id) (mig/list-migrations config))))
 
 (defn uncompleted-migrations
@@ -187,7 +192,7 @@
   (with-store [store (proto/make-store config)]
               (->> store
                    (selection-fn config)
-                   (mapv (juxt proto/id proto/name)))))
+                   (mapv (juxt proto/id proto/name proto/applied)))))
 
 (defn completed-list
   "List completed migrations"
@@ -230,3 +235,41 @@
                    reverse
                    (take-while #(> % migration-id))
                    (apply down config))))
+
+
+(comment
+  (require '[clojure.tools.trace :as trace])
+  (trace/trace-ns migratus.core)
+  (trace/trace-ns migratus.database)
+
+  (let [config {:store :database
+                :migration-dir "resources/migrations"
+                :db {:dbtype "postgresql"
+                     :dbname "test_db"
+                     :user "root"
+                     :password "root"}}
+        s (proto/make-store config)]
+    (do (proto/connect s)
+        (completed-migrations config s)
+        (proto/disconnect s)))
+
+  (jdbc/execute! (:db {:store :database
+                       :migration-dir "resources/migrations"
+                       :db {:dbtype "postgresql"
+                            :dbname "test_db"
+                            :user "root"
+                            :password "root"}}) ["select * from foo_bar"])
+
+  (let [config {:store :database
+                :migration-dir "resources/migrations"
+                :db {:dbtype "postgresql"
+                     :dbname "test_db"
+                     :user "root"
+                     :password "root"}}
+        s (proto/make-store config)]
+    (completed-list config))
+  
+(filter (comp [1 2 3 4] 2) [2 3 4 5 6])
+  
+
+  0)
